@@ -1,3 +1,14 @@
+---
+title: Autism Screening AI
+emoji: 🧠
+colorFrom: blue
+colorTo: purple
+sdk: streamlit
+sdk_version: 1.41.0
+app_file: streamlit_app.py
+pinned: false
+---
+
 # 🧠 AI-Powered Autism Screening System
 
 Early detection of autism spectrum disorder (ASD) using machine learning and explainable AI.
