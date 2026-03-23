@@ -205,16 +205,16 @@ with tab2:
         col1, col2, col3 = st.columns(3)
         with col1:
             age = st.number_input("Age", min_value=1, max_value=120, value=30)
-            gender = st.selectbox("Gender", ["m", "f"])
+            gender = st.selectbox("Gender", ["M", "F"])
         with col2:
-            ethnicity = st.selectbox("Ethnicity", ["white European", "latino", "asian", "black", "middle eastern", "mixed", "others"])
+            ethnicity = st.selectbox("Ethnicity", ["White", "Asian", "Black", "Others"])
             jundice = st.selectbox("Jaundice History", ["no", "yes"])
         with col3:
             autism_family = st.selectbox("Family Autism History", ["no", "yes"])
-            country = st.selectbox("Country", ["United States", "United Kingdom", "Canada", "Australia", "others"])
+            country = st.selectbox("Country", ["USA", "UK", "Canada", "India"])
         
         used_app = st.selectbox("Used App Before", ["no", "yes"])
-        screening_type = st.selectbox("Screening Type", ["adult", "clinical"])
+        screening_type = st.selectbox("Screening Type", ["Questionnaire", "Interview"])
         
         if st.form_submit_button("🔍 Get Assessment", use_container_width=True):
             try:
@@ -241,23 +241,39 @@ with tab2:
                 
                 input_df = pd.DataFrame([input_data])
                 
+                # Encode categorical variables
                 input_encoded = input_df.copy()
                 for col in le_dict.keys():
                     if col in input_encoded.columns:
-                        input_encoded[col] = le_dict[col].transform(input_encoded[col])
+                        try:
+                            input_encoded[col] = le_dict[col].transform(input_encoded[col])
+                        except ValueError:
+                            val = input_encoded[col].values[0]
+                            valid_classes = list(le_dict[col].classes_)
+                            matched = None
+                            for vc in valid_classes:
+                                if str(val).lower() in str(vc).lower() or str(vc).lower() in str(val).lower():
+                                    matched = vc
+                                    break
+                            if matched:
+                                input_encoded[col] = le_dict[col].transform([matched])[0]
+                            else:
+                                input_encoded[col] = le_dict[col].transform([valid_classes[0]])[0]
                 
-                numeric_cols = ['age'] + [c for c in input_df.columns if c.startswith('A')]
+                # Scale numeric features
+                numeric_cols = ['age'] + [c for c in feature_names if c.startswith('A')]
                 input_scaled = input_encoded.copy()
                 input_scaled[numeric_cols] = scaler.transform(input_encoded[numeric_cols])
                 
-                input_scaled = input_scaled[feature_names]
+                # Select features in EXACT order as training
+                input_final = input_scaled[feature_names].copy()
                 
-                pred_proba = model.predict_proba(input_scaled)[0]
+                pred_proba = model.predict_proba(input_final)[0]
                 autism_risk = pred_proba[1]
                 
                 st.session_state.autism_risk = autism_risk
                 st.session_state.pred_proba = pred_proba
-                st.session_state.input_scaled = input_scaled
+                st.session_state.input_final = input_final
                 
                 st.success("✅ Assessment complete! Check Results tab.")
             
@@ -321,9 +337,9 @@ with tab4:
         st.markdown("### 🔍 SHAP Feature Importance")
         
         try:
-            input_scaled = st.session_state.input_scaled
+            input_final = st.session_state.input_final
             
-            shap_vals = explainer.shap_values(input_scaled)
+            shap_vals = explainer.shap_values(input_final)
             shap_vals_class1 = shap_vals[:, :, 1][0]
             
             feature_imp_df = pd.DataFrame({
