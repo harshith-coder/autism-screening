@@ -260,8 +260,9 @@ with tab2:
                             else:
                                 input_encoded[col] = le_dict[col].transform([valid_classes[0]])[0]
                 
-                # Scale numeric features
-                numeric_cols = ['age'] + [c for c in feature_names if c.startswith('A')]
+                # Scale numeric features IN EXACT SCALER ORDER
+                # Scaler expects: A1-A10 first, then age (NOT age first!)
+                numeric_cols = [c for c in feature_names if c.startswith('A')] + ['age']
                 input_scaled = input_encoded.copy()
                 input_scaled[numeric_cols] = scaler.transform(input_encoded[numeric_cols])
                 
